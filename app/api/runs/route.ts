@@ -1,0 +1,62 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { KANBAN_CATEGORY_LABELS } from "@/lib/types";
+import { hourInTimezone } from "@/lib/date";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const runs = await prisma.run.findMany({
+    orderBy: { date: "desc" },
+    include: {
+      candidates: { select: { id: true } },
+      postedSelection: { include: { candidate: { include: { score: true } } } },
+      engagement: true,
+    },
+  });
+
+  return NextResponse.json(
+    runs.map((run) => ({
+      date: run.date,
+      candidateCount: run.candidates.length,
+      posted: !!run.postedSelection,
+      postedSelection: run.postedSelection
+        ? {
+            candidateId: run.postedSelection.candidateId,
+            topic: run.postedSelection.topicOverride ?? run.postedSelection.candidate.topic,
+            categoryKey: run.postedSelection.categoryOverride ?? run.postedSelection.candidate.category ?? null,
+            category:
+              (run.postedSelection.categoryOverride
+                ? KANBAN_CATEGORY_LABELS[run.postedSelection.categoryOverride]
+                : null) ??
+              run.postedSelection.themeOverride ??
+              run.postedSelection.candidate.theme ??
+              (run.postedSelection.candidate.category
+                ? KANBAN_CATEGORY_LABELS[run.postedSelection.candidate.category]
+                : "—"),
+            grounded: !!run.postedSelection.candidate.sourceUrl,
+            score: run.postedSelection.candidate.score
+              ? {
+                  hook: run.postedSelection.candidate.score.hook,
+                  insight: run.postedSelection.candidate.score.insight,
+                  authenticity: run.postedSelection.candidate.score.authenticity,
+                  engagement: run.postedSelection.candidate.score.engagement,
+                  clarity: run.postedSelection.candidate.score.clarity,
+                  total: run.postedSelection.candidate.score.total,
+                }
+              : null,
+            rank: run.postedSelection.candidate.rank,
+            postedAt: run.postedSelection.postedAt.toISOString(),
+            postedHour: hourInTimezone(run.postedSelection.postedAt),
+          }
+        : null,
+      engagement: run.engagement
+        ? {
+            impressions: run.engagement.impressions,
+            likes: run.engagement.likes,
+            comments: run.engagement.comments,
+          }
+        : null,
+    }))
+  );
+}

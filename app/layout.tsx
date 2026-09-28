@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { Inter, Sora } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
+const sora = Sora({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-heading-family" });
+
+export const metadata: Metadata = {
+  title: "Pulsedraft — Content Automation Tool for LinkedIn",
+  description: "Daily Scout → Remy → Val content pipeline for LinkedIn posts.",
+};
+
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var theme = localStorage.getItem("pulsedraft-theme");
+    if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  } catch (e) {}
+})();
+`;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
